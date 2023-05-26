@@ -48,7 +48,7 @@ public class LinkController {
 
 	@PutMapping("/update-link")
 	public Link updateLink(@RequestBody Link link) {
-		return service.saveLink(link);
+		return service.updateLink(link);
 	}
 
 	@DeleteMapping
