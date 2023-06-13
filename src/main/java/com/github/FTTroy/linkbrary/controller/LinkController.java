@@ -3,6 +3,7 @@ package com.github.FTTroy.linkbrary.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +18,7 @@ import com.github.FTTroy.linkbrary.service.LinkService;
 
 @RestController
 @RequestMapping("/link-controller")
+@CrossOrigin
 public class LinkController {
 
 	//sprivate static final Logger logger = LoggerFactory.getLogger(LinkController.class);
@@ -24,6 +26,7 @@ public class LinkController {
 	@Autowired
 	private LinkService service;
 
+	
 	@GetMapping("/find-all-links")
 	public List<Link> findAllLinks() {
 		return service.findAllLinks();
