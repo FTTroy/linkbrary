@@ -23,7 +23,7 @@ public class Link {
 
 	@Override
 	public String toString() {
-		return "id = " + id + "\n " + "name = " + name + "\n " + "content = " + content + "\n " + "description = "
+		return "\n id = " + id + "\n " + "name = " + name + "\n " + "content = " + content + "\n " + "description = "
 				+ description;
 	}
 

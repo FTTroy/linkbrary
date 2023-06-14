@@ -25,7 +25,7 @@ public class LinkService {
 	public Link saveLink(Link link) {
 		Optional<Link> linkOpt = repository.findLinkByName(link.getName());
 		if (linkOpt.isPresent()) {
-			logger.info("There is already alink saved with this name: " + link.getName());
+			logger.info("There is already a link saved with this name: " + link.getName());
 			return null;
 		}
 		logger.info("saving link: " + link.toString());
