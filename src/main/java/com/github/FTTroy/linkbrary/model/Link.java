@@ -20,11 +20,13 @@ public class Link {
 	private String content;
 
 	private String description;
+	
+	private boolean isFavourite;
 
 	@Override
 	public String toString() {
 		return "\n id = " + id + "\n " + "name = " + name + "\n " + "content = " + content + "\n " + "description = "
-				+ description;
+				+ description + "\n" + "isFavourite = " + isFavourite;
 	}
 
 }

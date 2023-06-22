@@ -85,6 +85,11 @@ public class LinkService {
 		return repository.findAll().stream().filter(link -> link != null).collect(Collectors.toList());
 
 	}
+	
+	public List<Link> findAllFavourites() {
+		return repository.findAllFavourites();
+
+	}
 
 	public boolean deleteLink(String id) {
 		Optional<Link> linkOpt = repository.findById(id);

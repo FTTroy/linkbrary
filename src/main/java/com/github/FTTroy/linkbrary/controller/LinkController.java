@@ -41,6 +41,11 @@ public class LinkController {
 	public Link findLinkByName(@RequestParam String name) {
 		return service.findLinkByName(name);
 	}
+	
+	@GetMapping("/find-all-favourites")
+	public List<Link> findAllFavourites(){
+		return service.findAllFavourites();
+	}
 
 	@PostMapping("/save-link")
 	public Link saveLink(@RequestBody Link link) {
