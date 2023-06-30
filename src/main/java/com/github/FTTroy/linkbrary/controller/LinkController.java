@@ -3,6 +3,7 @@ package com.github.FTTroy.linkbrary.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,12 +22,18 @@ import com.github.FTTroy.linkbrary.service.LinkService;
 @CrossOrigin
 public class LinkController {
 
-	//sprivate static final Logger logger = LoggerFactory.getLogger(LinkController.class);
+	// sprivate static final Logger logger =
+	// LoggerFactory.getLogger(LinkController.class);
 
 	@Autowired
 	private LinkService service;
 
-	
+	@GetMapping(value = "/export-link")
+//	@Produces("application/excel")
+	public ResponseEntity<byte[]> exportLink() {
+		return service.exportLinks();
+	}
+
 	@GetMapping("/find-all-links")
 	public List<Link> findAllLinks() {
 		return service.findAllLinks();
@@ -41,16 +48,16 @@ public class LinkController {
 	public Link findLinkByName(@RequestParam String name) {
 		return service.findLinkByName(name);
 	}
-	
+
 	@GetMapping("/find-all-favourites")
-	public List<Link> findAllFavourites(){
+	public List<Link> findAllFavourites() {
 		return service.findAllFavourites();
 	}
 
 	@PostMapping("/save-link")
 	public Link saveLink(@RequestBody Link link) {
-		//Link savedLink = service.saveLink(link);
-		//logger.info("Information Saved:\n " + savedLink.toString());
+		// Link savedLink = service.saveLink(link);
+		// logger.info("Information Saved:\n " + savedLink.toString());
 		return service.saveLink(link);
 	}
 

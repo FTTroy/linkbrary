@@ -1,18 +1,34 @@
 package com.github.FTTroy.linkbrary.service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.github.FTTroy.linkbrary.model.Link;
 import com.github.FTTroy.linkbrary.repository.LinkRepository;
+import com.github.FTTroy.linkbrary.utilities.Utility;
 
 @Service
 public class LinkService {
@@ -28,6 +44,8 @@ public class LinkService {
 			logger.info("There is already a link saved with this name: " + link.getName());
 			return null;
 		}
+		link.setContent(Utility.adjustLink(link.getContent()));
+
 		logger.info("saving link: " + link.toString());
 		return repository.save(link);
 
@@ -83,9 +101,8 @@ public class LinkService {
 
 	public List<Link> findAllLinks() {
 		return repository.findAll().stream().filter(link -> link != null).collect(Collectors.toList());
-
 	}
-	
+
 	public List<Link> findAllFavourites() {
 		return repository.findAllFavourites();
 
@@ -112,6 +129,64 @@ public class LinkService {
 			return isDeleted;
 		}
 
+	}
+
+	public ResponseEntity<byte[]> exportLinks() {
+		int rowCount = 1;
+		int columnCount = 0;
+		List<Link> linkList = repository.findAll();
+		Map<String, String> linkMap = new HashMap<>();
+
+		// creazione del file
+		Workbook wb = new XSSFWorkbook();
+		// creazione del foglio di lavoro
+		Sheet sheet = wb.createSheet("Links");
+
+		// creo lo stile delle celle
+		CellStyle style = wb.createCellStyle();
+
+		// itero la lista mettendo i valori nella mappa
+		for (Link l : linkList) {
+			linkMap.put(l.getName(), l.getContent());
+		}
+
+		Utility.createHeader(sheet);
+
+		// itero la mappa facendo stampare chiave e valore nell'excel
+		for (Entry<String, String> entry : linkMap.entrySet()) {
+
+			Row row = sheet.createRow(rowCount++); // creo la riga incrementando l'indice
+			Cell cell = row.createCell(columnCount);// creo la cella incrementando l'indice
+			cell.setCellStyle(Utility.boldStyle(wb, style));
+			cell.setCellValue(entry.getKey()); // stampo le chiavi
+
+			cell = row.createCell(columnCount + 1);
+			cell.setCellValue(entry.getValue());
+			cell.setHyperlink(Utility.createHyperLink(entry.getValue()));
+
+			sheet.autoSizeColumn(columnCount); // le celle si adattano alla lunghezza del testo
+			cell.setCellStyle(Utility.boldStyle(wb, style));// setto lo stile
+
+		}
+
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+		try {
+			wb.write(outputStream);
+			wb.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} // end catch
+
+		byte[] excelBytes = outputStream.toByteArray();
+
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_OCTET_STREAM); // setto il content type
+		headers.setContentLength(excelBytes.length); // setto la lunghezza del contenuto del file in byte
+		headers.setContentDispositionFormData("attachment", "linkbrary.xlsx");
+
+		return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
 	}
 
 }// end class
