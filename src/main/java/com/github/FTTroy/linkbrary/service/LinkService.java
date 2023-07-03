@@ -144,30 +144,34 @@ public class LinkService {
 
 		// creo lo stile delle celle
 		CellStyle style = wb.createCellStyle();
+		
+		//creo l'header
+		Utility.createHeader(sheet);
 
 		// itero la lista mettendo i valori nella mappa
 		for (Link l : linkList) {
 			linkMap.put(l.getName(), l.getContent());
 		}
-
-		Utility.createHeader(sheet);
-
+		
 		// itero la mappa facendo stampare chiave e valore nell'excel
 		for (Entry<String, String> entry : linkMap.entrySet()) {
 
 			Row row = sheet.createRow(rowCount++); // creo la riga incrementando l'indice
 			Cell cell = row.createCell(columnCount);// creo la cella incrementando l'indice
-			cell.setCellStyle(Utility.boldStyle(wb, style));
+			cell.setCellStyle(Utility.boldStyle(style));
 			cell.setCellValue(entry.getKey()); // stampo le chiavi
 
 			cell = row.createCell(columnCount + 1);
+			
 			cell.setCellValue(entry.getValue());
-			cell.setHyperlink(Utility.createHyperLink(entry.getValue()));
-
-			sheet.autoSizeColumn(columnCount); // le celle si adattano alla lunghezza del testo
-			cell.setCellStyle(Utility.boldStyle(wb, style));// setto lo stile
-
+			cell.setHyperlink(Utility.createHyperLink(wb, entry.getValue())); // set il valore della cella come un  HyperLink
+			cell.setCellStyle(Utility.boldStyle(style));// setto lo stile									
 		}
+		sheet.autoSizeColumn(0);
+		sheet.autoSizeColumn(1); // le celle si adattano alla lunghezza del test
+
+		 
+
 
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -175,7 +179,6 @@ public class LinkService {
 			wb.write(outputStream);
 			wb.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} // end catch
 
