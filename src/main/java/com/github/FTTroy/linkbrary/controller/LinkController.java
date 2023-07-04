@@ -60,6 +60,11 @@ public class LinkController {
 		// logger.info("Information Saved:\n " + savedLink.toString());
 		return service.saveLink(link);
 	}
+	
+	@PostMapping("/import-links")
+	public boolean importLinks () {
+		return service.importLinks();
+	}
 
 	@PutMapping("/update-link")
 	public Link updateLink(@RequestBody Link link) {

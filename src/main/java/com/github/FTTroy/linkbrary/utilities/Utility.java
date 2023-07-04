@@ -9,11 +9,14 @@ import org.apache.poi.ss.usermodel.Hyperlink;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFHyperlink;
+
+import com.github.FTTroy.linkbrary.model.Link;
 
 public class Utility {
 	public static final String prefix = "https://";
+	public static final String wwwUrlRegex = "^www\\..*\\.com$";
+	public static final String comUrlRegex = ".*\\.com$";
 
 	public static String adjustLink(String content) {
 
@@ -21,6 +24,28 @@ public class Utility {
 			content = prefix + content;
 		}
 		return content;
+	}
+
+	public static boolean isPossibleUrl(String content) {
+
+		if (content.matches(wwwUrlRegex) || content.matches(comUrlRegex))
+			return true;
+		else
+			return false;
+
+	}
+
+	public static boolean isLink(String link) {
+		return link.substring(0, 8).equals(prefix);
+	}
+
+	public static boolean isHeader(String content) {
+		return content.equals("NAME") || content.equals("CONTENT");
+	}
+
+	public static boolean linkIsValid(Link link) {
+		return (link.getName() != null && !link.getName().isEmpty() && !link.getName().isBlank())
+				|| (link.getContent() != null && !link.getContent().isEmpty() && !link.getContent().isBlank());
 	}
 
 	// EXCEL UTILS
@@ -57,13 +82,8 @@ public class Utility {
 
 	}
 
-	public static int mergeCell(Sheet sheet) {
-		int firstRow = 1;
-		int lastRow = 1;
-		int firstCol = 2;
-		int lastCol = 4;
-
-		return sheet.addMergedRegion(new CellRangeAddress(firstRow, lastRow, firstCol, lastCol));
-
+	public static boolean isValidCell(Cell cell) {
+		return (cell != null || cell.getStringCellValue().equals("") || cell.getStringCellValue().equals(" "));
 	}
+
 }

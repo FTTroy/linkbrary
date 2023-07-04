@@ -1,8 +1,10 @@
 package com.github.FTTroy.linkbrary.service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -14,6 +16,7 @@ import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,13 +42,14 @@ public class LinkService {
 	public LinkRepository repository;
 
 	public Link saveLink(Link link) {
+		link.setName(link.getName().toUpperCase());
+
 		Optional<Link> linkOpt = repository.findLinkByName(link.getName());
 		if (linkOpt.isPresent()) {
-			logger.info("There is already a link saved with this name: " + link.getName());
+			logger.error("There is already a link saved with this name: " + link.getName());
 			return null;
 		}
 		link.setContent(Utility.adjustLink(link.getContent()));
-
 		logger.info("saving link: " + link.toString());
 		return repository.save(link);
 
@@ -131,6 +135,62 @@ public class LinkService {
 
 	}
 
+	public boolean importLinks() {
+
+		try {
+			int rowCount = 1;
+
+			FileInputStream file = new FileInputStream("C:\\Users\\User\\Desktop/linkbrary.xlsx"); // legge il file al
+																									// percorso
+																									// specificato
+			XSSFWorkbook workbook = new XSSFWorkbook(file); // crea il workbook sulla base del file
+			XSSFSheet sheet = workbook.getSheetAt(0); // prende la prima sheet
+
+			Iterator<Row> rowIterator = sheet.iterator(); // creo iteratore per le righe
+
+			if (rowIterator.hasNext()) {
+				rowIterator.next();
+			}
+			while (rowIterator.hasNext()) {
+				Link link = new Link();
+
+				Row row = rowIterator.next(); // assegno alla row il prossimo valore dell'iteratore
+				Iterator<Cell> cellIterator = row.cellIterator(); // creo iteratore delle celle
+
+				while (cellIterator.hasNext()) {
+					Cell cell = cellIterator.next(); // assegno alla cella il prossimo valore dell'iteratore
+					if (Utility.isValidCell(cell)) {
+						if (cell.getStringCellValue().length() > 8) {
+							if (Utility.isLink(cell.getStringCellValue())
+									|| Utility.isPossibleUrl(cell.getStringCellValue())) {
+								link.setContent(cell.getStringCellValue());
+							}
+						} else {
+							link.setName(cell.getStringCellValue());
+						}
+					
+					} // end 1st if
+				} // end 2nd while
+				link.setFavourite(false);
+				logger.info("saving link with content: " + link.getContent());
+
+				if (Utility.linkIsValid(link))
+					saveLink(link);
+				else
+					logger.error("not a valid link " + link.toString());
+
+			} // end 1st while
+
+		} catch (
+
+		Exception e) {
+			e.printStackTrace();
+
+		}
+
+		return true;
+	}
+
 	public ResponseEntity<byte[]> exportLinks() {
 		int rowCount = 1;
 		int columnCount = 0;
@@ -144,15 +204,15 @@ public class LinkService {
 
 		// creo lo stile delle celle
 		CellStyle style = wb.createCellStyle();
-		
-		//creo l'header
+
+		// creo l'header
 		Utility.createHeader(sheet);
 
 		// itero la lista mettendo i valori nella mappa
 		for (Link l : linkList) {
 			linkMap.put(l.getName(), l.getContent());
 		}
-		
+
 		// itero la mappa facendo stampare chiave e valore nell'excel
 		for (Entry<String, String> entry : linkMap.entrySet()) {
 
@@ -162,16 +222,14 @@ public class LinkService {
 			cell.setCellValue(entry.getKey()); // stampo le chiavi
 
 			cell = row.createCell(columnCount + 1);
-			
+
 			cell.setCellValue(entry.getValue());
-			cell.setHyperlink(Utility.createHyperLink(wb, entry.getValue())); // set il valore della cella come un  HyperLink
-			cell.setCellStyle(Utility.boldStyle(style));// setto lo stile									
+			cell.setHyperlink(Utility.createHyperLink(wb, entry.getValue())); // set il valore della cella come un
+																				// HyperLink
+			cell.setCellStyle(Utility.boldStyle(style));// setto lo stile
 		}
 		sheet.autoSizeColumn(0);
-		sheet.autoSizeColumn(1); // le celle si adattano alla lunghezza del test
-
-		 
-
+		sheet.autoSizeColumn(1); // le celle si adattano alla lunghezza del testo
 
 		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
