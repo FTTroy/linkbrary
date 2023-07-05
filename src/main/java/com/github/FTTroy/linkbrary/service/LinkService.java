@@ -2,6 +2,7 @@ package com.github.FTTroy.linkbrary.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -141,7 +142,6 @@ public class LinkService {
 	@SuppressWarnings("resource")
 	public boolean importLinks(MultipartFile file) {
 
-		String fileName = file.getName();
 		if (file.isEmpty()) {
 			logger.error("The file must not be EMPTY");
 			throw new EmptyFileException();
@@ -160,7 +160,8 @@ public class LinkService {
 
 			if (!Validator.checkFileFormat(rowIterator)) {
 				logger.error("INVALID FILE FORMAT");
-				throw new Exception("IVALID FILE FORMAT");
+			
+				throw new Exception("INVALID FILE FORMAT!");
 			}
 
 			if (rowIterator.hasNext()) {
@@ -197,6 +198,9 @@ public class LinkService {
 			} // end 1st while
 
 		} catch (Exception e) {
+	
+			String fileName = "C:\\Users\\User\\Desktop\\linkbrary_log.txt";
+			Utility.LoggingInFile(Utility.fileCreator(fileName),"\n"+ new Date().toString()+" "+ e.getMessage());
 			e.printStackTrace();
 
 		}

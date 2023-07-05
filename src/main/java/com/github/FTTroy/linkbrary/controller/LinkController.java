@@ -64,7 +64,7 @@ public class LinkController {
 		return service.saveLink(link);
 	}
 	
-	@PostMapping(value="/import-links", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PostMapping(value="/import-links", consumes = MediaType.MULTIPART_FORM_DATA_VALUE) //prende in input un MultiPartFile
 	public boolean importLinks (@RequestPart("file") MultipartFile file) {
 		return service.importLinks(file);
 	}
