@@ -135,10 +135,10 @@ public class LinkService {
 
 	}
 
+	@SuppressWarnings("resource")
 	public boolean importLinks() {
 
 		try {
-			int rowCount = 1;
 
 			FileInputStream file = new FileInputStream("C:\\Users\\User\\Desktop/linkbrary.xlsx"); // legge il file al
 																									// percorso

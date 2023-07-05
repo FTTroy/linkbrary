@@ -8,7 +8,6 @@ import org.springframework.data.mongodb.repository.Query;
 
 import com.github.FTTroy.linkbrary.model.Link;
 
-
 public interface LinkRepository extends MongoRepository<Link, String>{
 	
 	@Query("{name : ?0}")
