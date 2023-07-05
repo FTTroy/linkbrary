@@ -1,7 +1,6 @@
 package com.github.FTTroy.linkbrary.service;
 
 import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -11,12 +10,13 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.poi.EmptyFileException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,10 +28,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.UnsupportedMediaTypeStatusException;
 
 import com.github.FTTroy.linkbrary.model.Link;
 import com.github.FTTroy.linkbrary.repository.LinkRepository;
 import com.github.FTTroy.linkbrary.utilities.Utility;
+import com.github.FTTroy.linkbrary.utilities.Validator;
 
 @Service
 public class LinkService {
@@ -136,17 +139,29 @@ public class LinkService {
 	}
 
 	@SuppressWarnings("resource")
-	public boolean importLinks() {
+	public boolean importLinks(MultipartFile file) {
 
+		String fileName = file.getName();
+		if (file.isEmpty()) {
+			logger.error("The file must not be EMPTY");
+			throw new EmptyFileException();
+		}
+
+		if (!Validator.checkFileExtension(file)) {
+			logger.error("error in the file extension!");
+			throw new UnsupportedMediaTypeStatusException("The file must be a .xlsx");
+		}
 		try {
 
-			FileInputStream file = new FileInputStream("C:\\Users\\User\\Desktop/linkbrary.xlsx"); // legge il file al
-																									// percorso
-																									// specificato
-			XSSFWorkbook workbook = new XSSFWorkbook(file); // crea il workbook sulla base del file
-			XSSFSheet sheet = workbook.getSheetAt(0); // prende la prima sheet
+			Workbook workbook = WorkbookFactory.create(file.getInputStream()); // crea il workbook sulla base del file
+			Sheet sheet = workbook.getSheetAt(0); // prende la prima sheet
 
 			Iterator<Row> rowIterator = sheet.iterator(); // creo iteratore per le righe
+
+			if (!Validator.checkFileFormat(rowIterator)) {
+				logger.error("INVALID FILE FORMAT");
+				throw new Exception("IVALID FILE FORMAT");
+			}
 
 			if (rowIterator.hasNext()) {
 				rowIterator.next();
@@ -161,29 +176,27 @@ public class LinkService {
 					Cell cell = cellIterator.next(); // assegno alla cella il prossimo valore dell'iteratore
 					if (Utility.isValidCell(cell)) {
 						if (cell.getStringCellValue().length() > 8) {
-							if (Utility.isLink(cell.getStringCellValue())
-									|| Utility.isPossibleUrl(cell.getStringCellValue())) {
+							if (Validator.isLink(cell.getStringCellValue())
+									|| Validator.isPossibleUrl(cell.getStringCellValue())) {
 								link.setContent(cell.getStringCellValue());
 							}
 						} else {
 							link.setName(cell.getStringCellValue());
 						}
-					
+
 					} // end 1st if
 				} // end 2nd while
 				link.setFavourite(false);
 				logger.info("saving link with content: " + link.getContent());
 
-				if (Utility.linkIsValid(link))
+				if (Validator.linkIsValid(link))
 					saveLink(link);
 				else
 					logger.error("not a valid link " + link.toString());
 
 			} // end 1st while
 
-		} catch (
-
-		Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 
 		}

@@ -10,45 +10,26 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFHyperlink;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.UnsupportedMediaTypeStatusException;
 
 import com.github.FTTroy.linkbrary.model.Link;
+import com.github.FTTroy.linkbrary.service.LinkService;
 
 public class Utility {
-	public static final String prefix = "https://";
-	public static final String wwwUrlRegex = "^www\\..*\\.com$";
-	public static final String comUrlRegex = ".*\\.com$";
 
 	public static String adjustLink(String content) {
 
-		if (!content.substring(0, 8).equals(prefix)) {
-			content = prefix + content;
+		if (!content.substring(0, 8).equals(Constants.PREFIX)) {
+			content = Constants.PREFIX + content;
 		}
 		return content;
 	}
 
-	public static boolean isPossibleUrl(String content) {
 
-		if (content.matches(wwwUrlRegex) || content.matches(comUrlRegex))
-			return true;
-		else
-			return false;
-
-	}
-
-	public static boolean isLink(String link) {
-		return link.substring(0, 8).equals(prefix);
-	}
-
-	public static boolean isHeader(String content) {
-		return content.equals("NAME") || content.equals("CONTENT");
-	}
-
-	public static boolean linkIsValid(Link link) {
-		return (link.getName() != null && !link.getName().isEmpty() && !link.getName().isBlank())
-				|| (link.getContent() != null && !link.getContent().isEmpty() && !link.getContent().isBlank());
-	}
-
-	// EXCEL UTILS
+	// ------------------------------EXCEL UTILS-----------------------------------------------
 
 	public static CellStyle boldStyle(CellStyle style) { // setto i bordi delle celle
 		style.setBorderTop(BorderStyle.MEDIUM);
