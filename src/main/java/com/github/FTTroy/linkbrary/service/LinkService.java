@@ -2,7 +2,7 @@ package com.github.FTTroy.linkbrary.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -23,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -34,6 +33,7 @@ import org.springframework.web.server.UnsupportedMediaTypeStatusException;
 
 import com.github.FTTroy.linkbrary.model.Link;
 import com.github.FTTroy.linkbrary.repository.LinkRepository;
+import com.github.FTTroy.linkbrary.utilities.Constants;
 import com.github.FTTroy.linkbrary.utilities.Utility;
 import com.github.FTTroy.linkbrary.utilities.Validator;
 
@@ -60,6 +60,7 @@ public class LinkService {
 	}
 
 	public Link updateLink(Link link) {
+
 		logger.info("update User with id: " + link.getId());
 		Optional<Link> linkOpt = repository.findById(link.getId());
 		if (linkOpt.isPresent()) {
@@ -67,31 +68,30 @@ public class LinkService {
 			BeanUtils.copyProperties(link, linkDb);
 			return repository.save(linkDb);
 		} else {
-			if (linkOpt.get().getId() != null)
+			if (linkOpt.get().getId() != null) {
 				logger.info("error updating link with id: " + link.getId());
-			else
+				return null;
+			} else {
 				logger.info("link with this id:" + link.getId() + " doesn't exist");
-			return null;
+				return null;
+			}
 		}
+
 	}
 
 	public Link findLinkByName(String name) {
 		logger.info("Finding link with name: " + name);
-		try {
-			Optional<Link> linkOpt = repository.findLinkByName(name);
+		Optional<Link> linkOpt = repository.findLinkByName(name);
 
-			if (linkOpt.isPresent()) {
-				Link linkDb = linkOpt.get();
-				logger.info("Link found: \n" + linkDb.toString());
-				return linkDb;
-			} else {
-				logger.info("Cannot find link with name: " + name);
-				return null;
-			}
-		} catch (IncorrectResultSizeDataAccessException e) {
-			logger.info("There is more than 1 link with this name: " + name);
+		if (linkOpt.isPresent()) {
+			Link linkDb = linkOpt.get();
+			logger.info("Link found: \n" + linkDb.toString());
+			return linkDb;
+		} else {
+			logger.info("Cannot find link with name: " + name);
 			return null;
 		}
+
 	}
 
 	public Link findLinkById(String id) {
@@ -141,26 +141,34 @@ public class LinkService {
 
 	@SuppressWarnings("resource")
 	public boolean importLinks(MultipartFile file) {
-
-		if (file.isEmpty()) {
-			logger.error("The file must not be EMPTY");
-			throw new EmptyFileException();
-		}
-
-		if (!Validator.checkFileExtension(file)) {
-			logger.error("error in the file extension!");
-			throw new UnsupportedMediaTypeStatusException("The file must be a .xlsx");
-		}
 		try {
+			if (file.isEmpty()) {
+				logger.error("The file must not be EMPTY");
+				throw new EmptyFileException();
+			}
 
+			if (!Validator.checkFileExtension(file)) {
+				logger.error("error in the file extension!");
+				throw new UnsupportedMediaTypeStatusException("The file must be a .xlsx");
+			}
+		} catch (UnsupportedMediaTypeStatusException e) {
+			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
+			e.printStackTrace();
+		} catch (EmptyFileException e) {
+			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
+			e.printStackTrace();
+		}
+
+		try {
+			ArrayList<Link> linkKO = new ArrayList<Link>();
 			Workbook workbook = WorkbookFactory.create(file.getInputStream()); // crea il workbook sulla base del file
 			Sheet sheet = workbook.getSheetAt(0); // prende la prima sheet
 
 			Iterator<Row> rowIterator = sheet.iterator(); // creo iteratore per le righe
 
-			if (!Validator.checkFileFormat(rowIterator)) {
+			if (!Validator.checkFileFormat(sheet)) {
 				logger.error("INVALID FILE FORMAT");
-			
+
 				throw new Exception("INVALID FILE FORMAT!");
 			}
 
@@ -175,32 +183,41 @@ public class LinkService {
 
 				while (cellIterator.hasNext()) {
 					Cell cell = cellIterator.next(); // assegno alla cella il prossimo valore dell'iteratore
-					if (Utility.isValidCell(cell)) {
+					if (Utility.isValidCell(cell)) { // verifico se le celle non sono vuote, con spazio vuoto o null
 						if (cell.getStringCellValue().length() > 8) {
-							if (Validator.isLink(cell.getStringCellValue())
-									|| Validator.isPossibleUrl(cell.getStringCellValue())) {
+							if (Validator.checkLinkValidity(cell.getStringCellValue())) {
 								link.setContent(cell.getStringCellValue());
+							} else {
+								if(link.getName() != null) {
+								link.setName(cell.getStringCellValue()); //TO DO snellire la logica di validazione
+								}else {
+									link.setContent(cell.getStringCellValue());
+								}
 							}
+
 						} else {
 							link.setName(cell.getStringCellValue());
 						}
 
-					} // end 1st if
+					}else {
+						logger.info("The Cell must not be NULL, BLANK OR EMPTY");
+					}
 				} // end 2nd while
 				link.setFavourite(false);
 				logger.info("saving link with content: " + link.getContent());
 
-				if (Validator.linkIsValid(link))
+				if (Validator.linkExist(link))
 					saveLink(link);
 				else
+					linkKO.add(link);
 					logger.error("not a valid link " + link.toString());
 
 			} // end 1st while
-
+			logger.info("Discarded links: \n");
+			for (Link l : linkKO)
+				logger.info(l.toString());
 		} catch (Exception e) {
-	
-			String fileName = "C:\\Users\\User\\Desktop\\linkbrary_log.txt";
-			Utility.LoggingInFile(Utility.fileCreator(fileName),"\n"+ new Date().toString()+" "+ e.getMessage());
+			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
 			e.printStackTrace();
 
 		}
@@ -254,6 +271,7 @@ public class LinkService {
 			wb.write(outputStream);
 			wb.close();
 		} catch (IOException e) {
+			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
 			e.printStackTrace();
 		} // end catch
 

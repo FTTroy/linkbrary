@@ -1,10 +1,9 @@
 package com.github.FTTroy.linkbrary.utilities;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Date;
 
 import org.apache.poi.common.usermodel.HyperlinkType;
 import org.apache.poi.ss.usermodel.BorderStyle;
@@ -41,18 +40,17 @@ public class Utility {
 				logger.info("file with name: "+file.getName()+" already exist!");
 			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			fileLogger(file, "\n" + new Date().toString() + " "+ e.getMessage());
 			e.printStackTrace();
 		}
 		
 		return file;
 	}
 	
-	public static void LoggingInFile(File file, String fileContent) {
-		
+	public static void fileLogger(File file, String fileContent) {
 	      try {
 			FileWriter writer = new FileWriter(file.getAbsoluteFile(), true);
-			writer.write(fileContent);
+			writer.write("\n" + new Date().toString() + " " +fileContent);
 			writer.flush();
 			writer.close();
 		} catch (IOException e) {
@@ -78,10 +76,10 @@ public class Utility {
 		Row headerRow = sheet.createRow(0);
 
 		Cell headerCell = headerRow.createCell(columnCount);
-		headerCell.setCellValue("NAME");
+		headerCell.setCellValue(Constants.NAME);
 
 		headerCell = headerRow.createCell(columnCount + 1);
-		headerCell.setCellValue("CONTENT");
+		headerCell.setCellValue(Constants.CONTENT);
 
 		return true;
 	}
@@ -97,7 +95,7 @@ public class Utility {
 	}
 
 	public static boolean isValidCell(Cell cell) {
-		return (cell != null || cell.getStringCellValue().equals("") || cell.getStringCellValue().equals(" "));
+		return (cell != null && !cell.getStringCellValue().isBlank() && !cell.getStringCellValue().isEmpty());
 	}
 
 }

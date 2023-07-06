@@ -2,6 +2,7 @@ package com.github.FTTroy.linkbrary.utilities;
 
 public class Constants {
 	
+	public static final String LOG_FILE_PATH = "C:\\Users\\User\\Desktop\\linkbrary_log.txt";
 	public static final String PREFIX = "https://";
 	public static final String WWW_URL_REGEX = "^www\\..*\\.com$";
 	public static final String COM_URL_REGEX = ".*\\.com$";

@@ -59,8 +59,6 @@ public class LinkController {
 
 	@PostMapping("/save-link")
 	public Link saveLink(@RequestBody Link link) {
-		// Link savedLink = service.saveLink(link);
-		// logger.info("Information Saved:\n " + savedLink.toString());
 		return service.saveLink(link);
 	}
 	
