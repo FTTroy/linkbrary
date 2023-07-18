@@ -25,14 +25,13 @@ import com.github.FTTroy.linkbrary.service.LinkService;
 @CrossOrigin
 public class LinkController {
 
-	// sprivate static final Logger logger =
+	// private static final Logger logger =
 	// LoggerFactory.getLogger(LinkController.class);
 
 	@Autowired
 	private LinkService service;
 
 	@GetMapping(value = "/export-link")
-//	@Produces("application/excel")
 	public ResponseEntity<byte[]> exportLink() {
 		return service.exportLinks();
 	}
@@ -71,8 +70,9 @@ public class LinkController {
 	public Link updateLink(@RequestBody Link link) {
 		return service.updateLink(link);
 	}
+	
 
-	@DeleteMapping
+	@DeleteMapping("/delete-link")
 	public boolean deleteLink(@RequestParam String id) {
 		return service.deleteLink(id);
 	}
