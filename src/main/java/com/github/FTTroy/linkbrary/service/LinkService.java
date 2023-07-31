@@ -23,10 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.UnsupportedMediaTypeStatusException;
@@ -46,17 +42,28 @@ public class LinkService {
 	public LinkRepository repository;
 
 	public Link saveLink(Link link) {
-		link.setName(link.getName().toUpperCase());
+		try {
+			if (Validator.checkName(link.getName()))
+				link.setName(link.getName().toUpperCase());
+			else
+				throw new Exception("The link must not be null, empty or blank");
 
-		Optional<Link> linkOpt = repository.findLinkByName(link.getName());
-		if (linkOpt.isPresent()) {
-			logger.error("There is already a link saved with this name: " + link.getName());
+			Optional<Link> linkOpt = repository.findLinkByName(link.getName());
+			if (linkOpt.isPresent()) {
+				logger.error("There is already a link saved with this name: " + link.getName());
+				return null;
+			}
+			if (link.getContent().length() > 8)
+				link.setContent(Utility.adjustLink(link.getContent()));
+			else
+				throw new Exception("The link length must be at least of 8");
+			logger.info("saving link: " + link.toString());
+			return repository.save(link);
+		} catch (Exception e) {
+			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
+			logger.info("Scrivo log nel file: " + Constants.LOG_FILE_PATH);
 			return null;
 		}
-		link.setContent(Utility.adjustLink(link.getContent()));
-		logger.info("saving link: " + link.toString());
-		return repository.save(link);
-
 	}
 
 	public Link updateLink(Link link) {
@@ -114,6 +121,15 @@ public class LinkService {
 	public List<Link> findAllFavourites() {
 		return repository.findAllFavourites();
 
+	}
+
+	public List<Link> findLikeLinksByNameAndContent(String name, String content) {
+		if (content != null && name == null)
+			return repository.findLikeLinksByContent(content);
+		else if (content == null && name != null) {
+			return repository.findLikeLinksByName(name.toUpperCase());
+		} else
+			return repository.findLikeLinksByNameAndContent(name.toUpperCase(), content);
 	}
 
 	public boolean deleteLink(String id) {
@@ -188,9 +204,9 @@ public class LinkService {
 							if (Validator.checkLinkValidity(cell.getStringCellValue())) {
 								link.setContent(cell.getStringCellValue());
 							} else {
-								if(link.getName() != null) {
-								link.setName(cell.getStringCellValue()); //TO DO snellire la logica di validazione
-								}else {
+								if (link.getName() != null) {
+									link.setName(cell.getStringCellValue()); // TO DO snellire la logica di validazione
+								} else {
 									link.setContent(cell.getStringCellValue());
 								}
 							}
@@ -199,7 +215,7 @@ public class LinkService {
 							link.setName(cell.getStringCellValue());
 						}
 
-					}else {
+					} else {
 						logger.info("The Cell must not be NULL, BLANK OR EMPTY");
 					}
 				} // end 2nd while
@@ -210,9 +226,9 @@ public class LinkService {
 					saveLink(link);
 				else
 					linkKO.add(link);
-					logger.error("not a valid link " + link.toString());
+				logger.error("not a valid link " + link.toString());
 
-			} // end 1st while
+			}
 			logger.info("Discarded links: \n");
 			for (Link l : linkKO)
 				logger.info(l.toString());
@@ -225,24 +241,37 @@ public class LinkService {
 		return true;
 	}
 
-	public ResponseEntity<byte[]> exportLinks() {
-		int rowCount = 1;
-		int columnCount = 0;
+	public byte[] exportLinks() {
 		List<Link> linkList = repository.findAll();
 		Map<String, String> linkMap = new HashMap<>();
 
-		// creazione del file
+		return genericLinkExport(linkList, linkMap);
+	}
+
+	public byte[] exportLinksById(List<String> idList) {
+		List<Link> linkList = new ArrayList<Link>();
+		Map<String, String> linkMap = new HashMap<>();
+
+		for (String id : idList) {
+			Optional<Link> link = repository.findById(id);
+			if (link.isPresent()) {
+				linkList.add(link.get());
+			}
+		}
+
+		return genericLinkExport(linkList, linkMap);
+	}
+
+	public byte[] genericLinkExport(List<Link> linkList, Map<String, String> linkMap) {
+
+		int rowCount = 1;
+		int columnCount = 0;
+
 		Workbook wb = new XSSFWorkbook();
-		// creazione del foglio di lavoro
 		Sheet sheet = wb.createSheet("Links");
-
-		// creo lo stile delle celle
 		CellStyle style = wb.createCellStyle();
-
-		// creo l'header
 		Utility.createHeader(sheet);
 
-		// itero la lista mettendo i valori nella mappa
 		for (Link l : linkList) {
 			linkMap.put(l.getName(), l.getContent());
 		}
@@ -273,16 +302,12 @@ public class LinkService {
 		} catch (IOException e) {
 			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
 			e.printStackTrace();
-		} // end catch
+		}
 
 		byte[] excelBytes = outputStream.toByteArray();
 
-		HttpHeaders headers = new HttpHeaders();
-		headers.setContentType(MediaType.APPLICATION_OCTET_STREAM); // setto il content type
-		headers.setContentLength(excelBytes.length); // setto la lunghezza del contenuto del file in byte
-		headers.setContentDispositionFormData("attachment", "linkbrary.xlsx");
+		return excelBytes;
 
-		return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
 	}
 
 }// end class

@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.github.FTTroy.linkbrary.model.Link;
 import com.github.FTTroy.linkbrary.service.LinkService;
+import com.mongodb.lang.Nullable;
 
 @RestController
 @RequestMapping("/link-controller")
@@ -30,11 +30,6 @@ public class LinkController {
 
 	@Autowired
 	private LinkService service;
-
-	@GetMapping(value = "/export-link")
-	public ResponseEntity<byte[]> exportLink() {
-		return service.exportLinks();
-	}
 
 	@GetMapping("/find-all-links")
 	public List<Link> findAllLinks() {
@@ -55,7 +50,22 @@ public class LinkController {
 	public List<Link> findAllFavourites() {
 		return service.findAllFavourites();
 	}
-
+	
+	@GetMapping("/find-like-links-by-name-and-content")
+	public List<Link> findLikeLinksByNameAndContent(@RequestParam @Nullable String name, @RequestParam @Nullable String content) {
+		return service.findLikeLinksByNameAndContent(name, content);
+	}
+	
+	@GetMapping(value = "/export-links")
+	public byte[] exportLink() {
+		return service.exportLinks();
+	}
+	
+	@GetMapping(value = "/export-links-by-id")
+	public byte[] exportLinkById(@RequestParam List<String> idList) {
+		return service.exportLinksById(idList);
+	}
+	
 	@PostMapping("/save-link")
 	public Link saveLink(@RequestBody Link link) {
 		return service.saveLink(link);
@@ -71,7 +81,6 @@ public class LinkController {
 		return service.updateLink(link);
 	}
 	
-
 	@DeleteMapping("/delete-link")
 	public boolean deleteLink(@RequestParam String id) {
 		return service.deleteLink(id);

@@ -15,5 +15,14 @@ public interface LinkRepository extends MongoRepository<Link, String>{
 	
 	@Query("{isFavourite : true}")
 	public List<Link> findAllFavourites();
+	
+	@Query("{name: /?0/}")
+	public List<Link> findLikeLinksByName(String name);
+	
+	@Query("{content: /?0/}")
+	public List<Link> findLikeLinksByContent(String content);
+	
+	@Query("{$and: [{name:/?0/}, {content:/?1/}]}")
+	public List<Link> findLikeLinksByNameAndContent(String name, String content);
 
 }

@@ -7,45 +7,42 @@ import com.github.FTTroy.linkbrary.model.Link;
 
 public class Validator {
 
-//	private static final Logger logger = LoggerFactory.getLogger(Validator.class);
-
-//	public static boolean isPossibleUrl(String content) {
-//		return (content.matches(Constants.WWW_URL_REGEX) || content.matches(Constants.COM_URL_REGEX));
-//	}
-
-//	public static boolean isLink(String link) {
-//		return link.substring(0, 8).equals(Constants.PREFIX);
-//	}
-
 	public static boolean isHeader(String content) {
 		return content.equals(Constants.NAME) || content.equals(Constants.CONTENT);
 	}
 
+	public static boolean checkName(String name) {
+		return (name != null && !name.isEmpty() && !name.isBlank());
+	}
+
+	public static boolean checkContent(String content) {
+		return (content != null && !content.isEmpty() && !content.isBlank());
+	}
+
 	public static boolean linkExist(Link link) {
-		boolean isOk = false;
-		if ((link.getName() != null && !link.getName().isEmpty() && !link.getName().isBlank())
-				&& (link.getContent() != null && !link.getContent().isEmpty() && !link.getContent().isBlank())) {
-			if (link.getContent().matches(Constants.COM_URL_REGEX)
-					|| link.getContent().matches(Constants.WWW_URL_REGEX)) {
-				isOk = true;
-				return isOk;
-
+		if ((checkName(link.getName()) && checkContent(link.getContent()))) {
+			if (link.getContent().matches(Constants.COM_URL_REGEX) || link.getContent().matches(Constants.WWW_URL_REGEX)
+					|| link.getContent().contains(Constants.PREFIX)) {
+				return true;
 			}
-
 		}
-		return isOk;
+		return false;
 	}
 
 	public static boolean checkLinkValidity(String content) {
-		boolean isOk = false;
-		if ((content.matches(Constants.WWW_URL_REGEX) || content.matches(Constants.COM_URL_REGEX))) {
-			isOk = true;
-			return isOk;
-		} else if (content.substring(0, 8).equals(Constants.PREFIX)) {
-			isOk = true;
-			return isOk;
-		} else {
-			return isOk;
+		try {
+			if ((content.matches(Constants.WWW_URL_REGEX) || content.matches(Constants.COM_URL_REGEX))) {
+				return true;
+			} else if (content.length() > 8 && content.substring(0, 8).equals(Constants.PREFIX)) {
+				return true;
+
+			} else {
+				return false;
+			}
+
+		} catch (Exception e) {
+			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
+			return false;
 		}
 
 	}
