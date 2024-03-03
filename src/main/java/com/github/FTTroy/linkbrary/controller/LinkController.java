@@ -1,9 +1,11 @@
 package com.github.FTTroy.linkbrary.controller;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,11 +20,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.github.FTTroy.linkbrary.model.Link;
 import com.github.FTTroy.linkbrary.service.LinkService;
-import com.mongodb.lang.Nullable;
 
+@CrossOrigin
 @RestController
 @RequestMapping("/link-controller")
-@CrossOrigin
 public class LinkController {
 
 	// private static final Logger logger =
@@ -37,7 +38,7 @@ public class LinkController {
 	}
 
 	@GetMapping("/find-link-by-id")
-	public Link findLinkById(@RequestParam String id) {
+	public Link findLinkById(@RequestParam Long id) {
 		return service.findLinkById(id);
 	}
 
@@ -50,29 +51,24 @@ public class LinkController {
 	public List<Link> findAllFavourites() {
 		return service.findAllFavourites();
 	}
-	
-	@GetMapping("/find-like-links-by-name-and-content")
-	public List<Link> findLikeLinksByNameAndContent(@RequestParam @Nullable String name, @RequestParam @Nullable String content) {
-		return service.findLikeLinksByNameAndContent(name, content);
-	}
-	
-	@GetMapping(value = "/export-links")
-	public byte[] exportLink() {
+
+	@GetMapping("/export-links")
+	public ResponseEntity<byte[]> exportLinks() throws IOException {
 		return service.exportLinks();
 	}
-	
-	@GetMapping(value = "/export-links-by-id")
-	public byte[] exportLinkById(@RequestParam List<String> idList) {
-		return service.exportLinksById(idList);
+
+	@GetMapping("/get-template")
+	public ResponseEntity<byte[]> getTemplate() throws IOException {
+		return service.getTemplate();
 	}
-	
+
 	@PostMapping("/save-link")
-	public Link saveLink(@RequestBody Link link) {
+	public Link saveLink(@RequestBody Link link) throws Exception {
 		return service.saveLink(link);
 	}
-	
+
 	@PostMapping(value="/import-links", consumes = MediaType.MULTIPART_FORM_DATA_VALUE) //prende in input un MultiPartFile
-	public boolean importLinks (@RequestPart("file") MultipartFile file) {
+	public ResponseEntity<?> importLinks (@RequestPart("file") MultipartFile file) throws IOException {
 		return service.importLinks(file);
 	}
 
@@ -80,10 +76,8 @@ public class LinkController {
 	public Link updateLink(@RequestBody Link link) {
 		return service.updateLink(link);
 	}
-	
 	@DeleteMapping("/delete-link")
-	public boolean deleteLink(@RequestParam String id) {
-		return service.deleteLink(id);
+	public void deleteLink(@RequestParam Long id) {
+		 service.deleteLink(id);
 	}
-
-}// end class
+}

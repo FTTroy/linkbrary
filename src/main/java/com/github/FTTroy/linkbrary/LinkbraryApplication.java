@@ -2,10 +2,10 @@ package com.github.FTTroy.linkbrary;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication
-@EnableMongoRepositories
+@EnableJpaRepositories
 public class LinkbraryApplication {
 
 	public static void main(String[] args) {

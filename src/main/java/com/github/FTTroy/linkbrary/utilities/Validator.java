@@ -1,59 +1,56 @@
 package com.github.FTTroy.linkbrary.utilities;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Sheet;
-import org.springframework.web.multipart.MultipartFile;
 
-import com.github.FTTroy.linkbrary.model.Link;
+import java.util.Arrays;
 
 public class Validator {
 
-	public static boolean isHeader(String content) {
-		return content.equals(Constants.NAME) || content.equals(Constants.CONTENT);
-	}
+    /**
+     * verify if the given string is a valid link that match the regular expressions
+     *
+     * @author Francesco Troiano
+     */
+    public static boolean checkLinkValidity(String content) {
+        return content != null && (content.matches(Constants.WWW_URL_REGEX)
+                || content.matches(Constants.COM_URL_REGEX)
+                || content.startsWith(Constants.PREFIX));
+    }
 
-	public static boolean checkName(String name) {
-		return (name != null && !name.isEmpty() && !name.isBlank());
-	}
+    /**
+     * verify if the file extension is valid.
+     *
+     * @author Francesco Troiano
+     */
+    public static boolean checkFileExtension(String contentType) {
+        return Constants.XLSX_CONTENT_TYPE.equals(contentType);
+    }
 
-	public static boolean checkContent(String content) {
-		return (content != null && !content.isEmpty() && !content.isBlank());
-	}
+    /**
+     * verify if the file template is valid.
+     *
+     * @author Francesco Troiano
+     */
+    public static boolean checkFileTemplate(Sheet sheet) {
+        return (sheet.getRow(0).getCell(0).toString().equals(Constants.NAME)
+                && sheet.getRow(0).getCell(1).toString().equals(Constants.CONTENT));
+    }
 
-	public static boolean linkExist(Link link) {
-		if ((checkName(link.getName()) && checkContent(link.getContent()))) {
-			if (link.getContent().matches(Constants.COM_URL_REGEX) || link.getContent().matches(Constants.WWW_URL_REGEX)
-					|| link.getContent().contains(Constants.PREFIX)) {
-				return true;
-			}
-		}
-		return false;
-	}
 
-	public static boolean checkLinkValidity(String content) {
-		try {
-			if ((content.matches(Constants.WWW_URL_REGEX) || content.matches(Constants.COM_URL_REGEX))) {
-				return true;
-			} else if (content.length() > 8 && content.substring(0, 8).equals(Constants.PREFIX)) {
-				return true;
+    public static boolean isValidLinkToImport(Cell cell) {
+        return (ExcelUtils.isValidCell(cell))
+                && (cell.getStringCellValue().length() > 8)
+                && (Validator.checkLinkValidity(cell.getStringCellValue()));
+    }
 
-			} else {
-				return false;
-			}
-
-		} catch (Exception e) {
-			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
-			return false;
-		}
-
-	}
-
-	public static boolean checkFileExtension(MultipartFile file) {
-		return (file.getContentType().equals(Constants.XLSX_CONTENT_TYPE));
-
-	}
-
-	public static boolean checkFileFormat(Sheet sheet) {
-		return (sheet.getRow(0).getCell(0).toString().equals(Constants.NAME)
-				&& sheet.getRow(0).getCell(1).toString().equals(Constants.CONTENT));
-	}
-}// end class
+    /**
+     * verify if the given varargs are null, blank or empty.
+     *
+     * @author Francesco Troiano
+     */
+    public static boolean checkStringValidity(String... args) {
+        return Arrays.stream(args).allMatch(StringUtils::isNotBlank);
+    }
+}

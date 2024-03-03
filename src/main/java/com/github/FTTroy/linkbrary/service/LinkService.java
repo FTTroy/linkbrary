@@ -8,9 +8,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
+import com.github.FTTroy.linkbrary.utilities.ExcelUtils;
 import org.apache.poi.EmptyFileException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -23,291 +22,187 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.UnsupportedMediaTypeStatusException;
 
 import com.github.FTTroy.linkbrary.model.Link;
 import com.github.FTTroy.linkbrary.repository.LinkRepository;
-import com.github.FTTroy.linkbrary.utilities.Constants;
 import com.github.FTTroy.linkbrary.utilities.Utility;
 import com.github.FTTroy.linkbrary.utilities.Validator;
 
 @Service
 public class LinkService {
 
-	private static final Logger logger = LoggerFactory.getLogger(LinkService.class);
+    private static final Logger logger = LoggerFactory.getLogger(LinkService.class);
 
-	@Autowired
-	public LinkRepository repository;
+    @Autowired
+    public LinkRepository repository;
 
-	public Link saveLink(Link link) {
-		try {
-			if (Validator.checkName(link.getName()))
-				link.setName(link.getName().toUpperCase());
-			else
-				throw new Exception("The link must not be null, empty or blank");
 
-			Optional<Link> linkOpt = repository.findLinkByName(link.getName());
-			if (linkOpt.isPresent()) {
-				logger.error("There is already a link saved with this name: " + link.getName());
-				return null;
-			}
-			if (link.getContent().length() > 8)
-				link.setContent(Utility.adjustLink(link.getContent()));
-			else
-				throw new Exception("The link length must be at least of 8");
-			logger.info("saving link: " + link.toString());
-			return repository.save(link);
-		} catch (Exception e) {
-			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
-			logger.info("Scrivo log nel file: " + Constants.LOG_FILE_PATH);
-			return null;
-		}
-	}
+    public Link saveLink(Link link) {
+        link.setName(link.getName().toUpperCase());
+        link.setContent(Utility.setHttpPrefix(link.getContent()));
+        return repository.save(link);
+    }
 
-	public Link updateLink(Link link) {
+    public Link updateLink(Link link) {
+        Link linkDb = repository.findById(link.getId()).orElseThrow(RuntimeException::new);
+        BeanUtils.copyProperties(link, linkDb);
+        return repository.save(linkDb);
+    }
 
-		logger.info("update User with id: " + link.getId());
-		Optional<Link> linkOpt = repository.findById(link.getId());
-		if (linkOpt.isPresent()) {
-			Link linkDb = linkOpt.get();
-			BeanUtils.copyProperties(link, linkDb);
-			return repository.save(linkDb);
-		} else {
-			if (linkOpt.get().getId() != null) {
-				logger.info("error updating link with id: " + link.getId());
-				return null;
-			} else {
-				logger.info("link with this id:" + link.getId() + " doesn't exist");
-				return null;
-			}
-		}
 
-	}
+    public Link findLinkByName(String name) {
+        return repository.findLinkByName(name).isPresent() ? repository.findLinkByName(name).get() : null;
+    }
 
-	public Link findLinkByName(String name) {
-		logger.info("Finding link with name: " + name);
-		Optional<Link> linkOpt = repository.findLinkByName(name);
+    public Link findLinkById(Long id) {
+        return repository.findById(id).isPresent() ? repository.findById(id).get() : null;
+    }
 
-		if (linkOpt.isPresent()) {
-			Link linkDb = linkOpt.get();
-			logger.info("Link found: \n" + linkDb.toString());
-			return linkDb;
-		} else {
-			logger.info("Cannot find link with name: " + name);
-			return null;
-		}
+    public List<Link> findAllLinks() {
+        return repository.findAll();
+    }
 
-	}
+    public List<Link> findAllFavourites() {
+        return repository.findLinkByIsFavouriteTrue();
+    }
 
-	public Link findLinkById(String id) {
-		logger.info("Finding link with id: " + id);
-		Optional<Link> linkOpt = repository.findById(id);
-		if (linkOpt.isPresent()) {
-			Link linkDb = linkOpt.get();
-			logger.info("Link found: \n" + linkDb.toString());
-			return linkDb;
-		} else {
-			logger.info("Cannot find link with id: " + id);
-			return null;
-		}
-	}
+    public void deleteLink(Long id) {
+        repository.findById(id).ifPresent(x -> repository.deleteById(x.getId()));
+    }
 
-	public List<Link> findAllLinks() {
-		return repository.findAll().stream().filter(link -> link != null).collect(Collectors.toList());
-	}
+    public ResponseEntity<?> importLinks(MultipartFile file) throws IOException {
+        ArrayList<Link> invalidLinks = new ArrayList<>();
+        try {
+            if (file.isEmpty()) {
+                logger.error("The file must not be EMPTY");
+                throw new EmptyFileException();
+            }
 
-	public List<Link> findAllFavourites() {
-		return repository.findAllFavourites();
+            if (!Validator.checkFileExtension(file.getContentType())) {
+                logger.error("error in the file extension!");
+                throw new UnsupportedMediaTypeStatusException("The file must be a .xlsx");
+            }
+        } catch (UnsupportedMediaTypeStatusException e) {
+            Utility.fileLogger(e.getMessage());
+            e.printStackTrace();
+        } catch (EmptyFileException e) {
+            Utility.fileLogger(e.getMessage());
+            e.printStackTrace();
+        }
 
-	}
+        try {
+            Workbook workbook = WorkbookFactory.create(file.getInputStream()); // crea il workbook sulla base del file
+            Sheet sheet = workbook.getSheetAt(0); // prende la prima sheet
 
-	public List<Link> findLikeLinksByNameAndContent(String name, String content) {
-		if (content != null && name == null)
-			return repository.findLikeLinksByContent(content);
-		else if (content == null && name != null) {
-			return repository.findLikeLinksByName(name.toUpperCase());
-		} else
-			return repository.findLikeLinksByNameAndContent(name.toUpperCase(), content);
-	}
+            Iterator<Row> rowIterator = sheet.iterator(); // creo iteratore per le righe
 
-	public boolean deleteLink(String id) {
-		Optional<Link> linkOpt = repository.findById(id);
-		boolean isDeleted = false;
-		if (linkOpt.isPresent()) {
+            if (!Validator.checkFileTemplate(sheet)) {
+                logger.error("INVALID FILE FORMAT");
 
-			try {
-				Link linkDb = linkOpt.get();
-				repository.delete(linkDb);
-				logger.info("Deleting Link with id: " + id);
-				isDeleted = true;
-				return isDeleted;
-			} catch (Exception e) {
-				logger.info("Something goes wrong while trying to delete link");
-				return isDeleted;
-			}
+                throw new Exception("INVALID FILE FORMAT!");
+            }
+            if (rowIterator.hasNext()) {
+                rowIterator.next();
+            }
+            while (rowIterator.hasNext()) {
+                Link link = new Link();
+                Row row = rowIterator.next(); // assegno alla row il prossimo valore dell'iteratore
+                Iterator<Cell> cellIterator = row.cellIterator(); // creo iteratore delle celle
+                while (cellIterator.hasNext()) {
+                    Cell cell = cellIterator.next(); // assegno alla cella il prossimo valore dell'iteratore
+                    if (Validator.isValidLinkToImport(cell)) {
+                        link.setContent(cell.getStringCellValue());
+                    } else {
+                        link.setName(cell.getStringCellValue()); // TO DO snellire la logica di validazione
+                    }
+                }
 
-		} else {
-			logger.info("There is no link with the given id: " + id);
-			return isDeleted;
-		}
+                if (Validator.checkStringValidity(link.getName(), link.getContent())
+                        && Validator.checkLinkValidity(link.getContent())) {
+                    saveLink(link);
+                } else {
+                    invalidLinks.add(link);
+                }
+            }
+        } catch (Exception e) {
+            Utility.fileLogger(e.getMessage());
+        }
+        return invalidLinks.isEmpty() ? ResponseEntity.ok().build() : ResponseEntity.ok(invalidLinks);
+    }
 
-	}
+    public ResponseEntity<byte[]> exportLinks() throws IOException {
+        byte[] excelBytes = new byte[0];
+        int rowCount = 1;
+        int columnCount = 0;
+        List<Link> linkList = repository.findAll();
+        Map<String, String> linkMap = new HashMap<>();
 
-	@SuppressWarnings("resource")
-	public boolean importLinks(MultipartFile file) {
-		try {
-			if (file.isEmpty()) {
-				logger.error("The file must not be EMPTY");
-				throw new EmptyFileException();
-			}
+        // creazione del file
+        Workbook wb = new XSSFWorkbook();
+        // creazione del foglio di lavoro
+        Sheet sheet = ExcelUtils.createSheet(wb, "links");
+        // creo lo stile delle celle
+        CellStyle style = wb.createCellStyle();
+        // creo l'header
 
-			if (!Validator.checkFileExtension(file)) {
-				logger.error("error in the file extension!");
-				throw new UnsupportedMediaTypeStatusException("The file must be a .xlsx");
-			}
-		} catch (UnsupportedMediaTypeStatusException e) {
-			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
-			e.printStackTrace();
-		} catch (EmptyFileException e) {
-			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
-			e.printStackTrace();
-		}
+        // itero la lista mettendo i valori nella mappa
+        linkList.forEach(link -> linkMap.put(link.getName(), link.getContent()));
 
-		try {
-			ArrayList<Link> linkKO = new ArrayList<Link>();
-			Workbook workbook = WorkbookFactory.create(file.getInputStream()); // crea il workbook sulla base del file
-			Sheet sheet = workbook.getSheetAt(0); // prende la prima sheet
+        // itero la mappa facendo stampare chiave e valore nell'excel
+        for (Entry<String, String> entry : linkMap.entrySet()) {
 
-			Iterator<Row> rowIterator = sheet.iterator(); // creo iteratore per le righe
+            Row row = sheet.createRow(rowCount++); // creo la riga incrementando l'indice
+            Cell cell = row.createCell(columnCount);// creo la cella incrementando l'indice
+            cell.setCellStyle(ExcelUtils.boldStyle(style));
+            cell.setCellValue(entry.getKey());
 
-			if (!Validator.checkFileFormat(sheet)) {
-				logger.error("INVALID FILE FORMAT");
+            cell = row.createCell(columnCount + 1);
 
-				throw new Exception("INVALID FILE FORMAT!");
-			}
+            cell.setCellValue(entry.getValue());
+            cell.setHyperlink(ExcelUtils.createHyperLink(wb, entry.getValue())); // set il valore della cella come un HyperLink
+            cell.setCellStyle(ExcelUtils.boldStyle(style));// setto lo stile
+        }
+        sheet.autoSizeColumn(0);
+        sheet.autoSizeColumn(1); // le celle si adattano alla lunghezza del testo
 
-			if (rowIterator.hasNext()) {
-				rowIterator.next();
-			}
-			while (rowIterator.hasNext()) {
-				Link link = new Link();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-				Row row = rowIterator.next(); // assegno alla row il prossimo valore dell'iteratore
-				Iterator<Cell> cellIterator = row.cellIterator(); // creo iteratore delle celle
+        try {
+            excelBytes = ExcelUtils.getExcelBytes(wb, outputStream);
+        } catch (IOException e) {
+            Utility.fileLogger(e.getMessage());
+        }
 
-				while (cellIterator.hasNext()) {
-					Cell cell = cellIterator.next(); // assegno alla cella il prossimo valore dell'iteratore
-					if (Utility.isValidCell(cell)) { // verifico se le celle non sono vuote, con spazio vuoto o null
-						if (cell.getStringCellValue().length() > 8) {
-							if (Validator.checkLinkValidity(cell.getStringCellValue())) {
-								link.setContent(cell.getStringCellValue());
-							} else {
-								if (link.getName() != null) {
-									link.setName(cell.getStringCellValue()); // TO DO snellire la logica di validazione
-								} else {
-									link.setContent(cell.getStringCellValue());
-								}
-							}
+        HttpHeaders headers = ExcelUtils.setHeaders("linkbrary.xlsx", excelBytes.length);
+        return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
 
-						} else {
-							link.setName(cell.getStringCellValue());
-						}
+    }
 
-					} else {
-						logger.info("The Cell must not be NULL, BLANK OR EMPTY");
-					}
-				} // end 2nd while
-				link.setFavourite(false);
-				logger.info("saving link with content: " + link.getContent());
+    public ResponseEntity<byte[]> getTemplate() throws IOException {
+        byte[] excelBytes = new byte[0];
+        Workbook wb = new XSSFWorkbook();
+        Sheet sheet = ExcelUtils.createSheet(wb, "links");
+        CellStyle style = wb.createCellStyle();
+        ExcelUtils.createHeader(sheet);
+        sheet.getRow(0).getCell(0).setCellStyle(ExcelUtils.boldStyle(style));
+        sheet.getRow(0).getCell(1).setCellStyle(ExcelUtils.boldStyle(style));
+        sheet.autoSizeColumn(0);
+        sheet.autoSizeColumn(1); // le celle si adattano alla lunghezza del testo
 
-				if (Validator.linkExist(link))
-					saveLink(link);
-				else
-					linkKO.add(link);
-				logger.error("not a valid link " + link.toString());
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try {
+            excelBytes = ExcelUtils.getExcelBytes(wb, outputStream);
+        } catch (IOException e) {
+            Utility.fileLogger(e.getMessage());
+        }
+        HttpHeaders headers = ExcelUtils.setHeaders("linkbrary_template.xlsx", excelBytes.length);
+        return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
+    }
+}
 
-			}
-			logger.info("Discarded links: \n");
-			for (Link l : linkKO)
-				logger.info(l.toString());
-		} catch (Exception e) {
-			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
-			e.printStackTrace();
-
-		}
-
-		return true;
-	}
-
-	public byte[] exportLinks() {
-		List<Link> linkList = repository.findAll();
-		Map<String, String> linkMap = new HashMap<>();
-
-		return genericLinkExport(linkList, linkMap);
-	}
-
-	public byte[] exportLinksById(List<String> idList) {
-		List<Link> linkList = new ArrayList<Link>();
-		Map<String, String> linkMap = new HashMap<>();
-
-		for (String id : idList) {
-			Optional<Link> link = repository.findById(id);
-			if (link.isPresent()) {
-				linkList.add(link.get());
-			}
-		}
-
-		return genericLinkExport(linkList, linkMap);
-	}
-
-	public byte[] genericLinkExport(List<Link> linkList, Map<String, String> linkMap) {
-
-		int rowCount = 1;
-		int columnCount = 0;
-
-		Workbook wb = new XSSFWorkbook();
-		Sheet sheet = wb.createSheet("Links");
-		CellStyle style = wb.createCellStyle();
-		Utility.createHeader(sheet);
-
-		for (Link l : linkList) {
-			linkMap.put(l.getName(), l.getContent());
-		}
-
-		// itero la mappa facendo stampare chiave e valore nell'excel
-		for (Entry<String, String> entry : linkMap.entrySet()) {
-
-			Row row = sheet.createRow(rowCount++); // creo la riga incrementando l'indice
-			Cell cell = row.createCell(columnCount);// creo la cella incrementando l'indice
-			cell.setCellStyle(Utility.boldStyle(style));
-			cell.setCellValue(entry.getKey()); // stampo le chiavi
-
-			cell = row.createCell(columnCount + 1);
-
-			cell.setCellValue(entry.getValue());
-			cell.setHyperlink(Utility.createHyperLink(wb, entry.getValue())); // set il valore della cella come un
-																				// HyperLink
-			cell.setCellStyle(Utility.boldStyle(style));// setto lo stile
-		}
-		sheet.autoSizeColumn(0);
-		sheet.autoSizeColumn(1); // le celle si adattano alla lunghezza del testo
-
-		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-
-		try {
-			wb.write(outputStream);
-			wb.close();
-		} catch (IOException e) {
-			Utility.fileLogger(Utility.fileCreator(Constants.LOG_FILE_PATH), e.getMessage());
-			e.printStackTrace();
-		}
-
-		byte[] excelBytes = outputStream.toByteArray();
-
-		return excelBytes;
-
-	}
-
-}// end class

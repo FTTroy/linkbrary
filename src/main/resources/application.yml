@@ -1,0 +1,18 @@
+spring:
+  servlet:
+    multipart:
+      location:  C:/Users/Francesco
+  datasource:
+    url: jdbc:mysql://localhost:3306/linkbrary
+    username: root
+    password: root
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+  driver-class-name: com.mysql.cj.jdbc.Driver
+spring.jpa.show-sql: true
+springdoc:
+  api-docs.path: /api-docs
+  swagger-ui.path: /swagger-ui.html
+  springdoc.swagger-ui.enabled: true
