@@ -80,20 +80,17 @@ public class LinkService {
         ArrayList<Link> invalidLinks = new ArrayList<>();
         try {
             if (file.isEmpty()) {
-                logger.error("The file must not be EMPTY");
+                logger.error("file is empty");
                 throw new EmptyFileException();
             }
-
             if (!Validator.checkFileExtension(file.getContentType())) {
-                logger.error("error in the file extension!");
-                throw new UnsupportedMediaTypeStatusException("The file must be a .xlsx");
+                logger.error("file must be an .xlsx");
+                throw new UnsupportedMediaTypeStatusException("file must be an .xlsx");
             }
         } catch (UnsupportedMediaTypeStatusException e) {
             Utility.fileLogger(e.getMessage());
-            e.printStackTrace();
         } catch (EmptyFileException e) {
             Utility.fileLogger(e.getMessage());
-            e.printStackTrace();
         }
 
         try {
@@ -104,8 +101,7 @@ public class LinkService {
 
             if (!Validator.checkFileTemplate(sheet)) {
                 logger.error("INVALID FILE FORMAT");
-
-                throw new Exception("INVALID FILE FORMAT!");
+                throw new Exception("invalid file format");
             }
             if (rowIterator.hasNext()) {
                 rowIterator.next();
@@ -119,10 +115,9 @@ public class LinkService {
                     if (Validator.isValidLinkToImport(cell)) {
                         link.setContent(cell.getStringCellValue());
                     } else {
-                        link.setName(cell.getStringCellValue()); // TO DO snellire la logica di validazione
+                        link.setName(cell.getStringCellValue());
                     }
                 }
-
                 if (Validator.checkStringValidity(link.getName(), link.getContent())
                         && Validator.checkLinkValidity(link.getContent())) {
                     saveLink(link);
